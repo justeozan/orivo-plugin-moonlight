@@ -1,0 +1,5 @@
+# The component is built by `build.sh` into `package/component.wasm`, which is
+# committed on purpose (same rule as Orivo's `plugins/ryujinx`): only the
+# compiler output changes when the sources change, and the digest in
+# `package/manifest.json` is checked against it.
+target/

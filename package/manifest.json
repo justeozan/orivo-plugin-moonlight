@@ -1,0 +1,23 @@
+{
+  "id": "com.orivo.gamestream",
+  "name": "Moonlight / Sunshine",
+  "version": "0.1.0",
+  "sdk": "orivo-plugin@1",
+  "minOrivoVersion": "0.3.0",
+  "extensions": [
+    "runner"
+  ],
+  "capabilities": [
+    "runner_prepare",
+    "files_read"
+  ],
+  "networkDomains": [],
+  "artifacts": [
+    {
+      "path": "component.wasm",
+      "kind": "component",
+      "sha256": "36b3fd0f1e97632a7f0c67354e39abdea5e29c994b84b899735237e1cf393562",
+      "byteSize": 35404
+    }
+  ]
+}

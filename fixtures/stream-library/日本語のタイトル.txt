@@ -1,0 +1,1 @@
+ignored: multi-byte UTF-8 name that is not a placeholder (used to risk a slice panic)
