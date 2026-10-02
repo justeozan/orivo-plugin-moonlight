@@ -12,6 +12,11 @@ compile, se valide et se simule aujourd'hui.
 > lire une bibliothèque distante. La parade du v0.1 est un *wrapper* choisi
 > comme application du profil ; le vrai fix est une décision d'ABI côté Orivo.
 > Tout est détaillé dans [`docs/05-manques-et-plan.md`](docs/05-manques-et-plan.md).
+>
+> **Publication** : `v0.1.0` est empaquetée, signée avec la clé de release
+> d'Orivo, publiée en release GitHub et listée dans l'index signé du registre
+> — elle apparaît donc dans `Settings → Plugins`. Le paragraphe ci-dessus
+> tient toujours : *publié* ne veut pas encore dire *streamme*.
 
 ## Ce qu'il y a ici
 
@@ -32,6 +37,9 @@ compile, se valide et se simule aujourd'hui.
 ├── package/
 │   ├── manifest.json             ← manifeste réel (sha256 + taille du composant)
 │   └── component.wasm            ← artefact committé, digest vérifié à chaque validate
+├── scripts/                      ← empaquetage : build.mjs, sign.mjs, verify.mjs
+│   └── lib/                      ← miroirs JS des règles host (manifeste, tar)
+├── package.json                  ← `npm run build` / `sign` / `verify` (node ≥ 20)
 └── fixtures/stream-library/      ← dossiers de test : espaces, crochets, .txt ignoré, nom trop long
 ```
 
@@ -76,6 +84,53 @@ caractères écarté avec une ligne d'avertissement au journal),
 la simulation doit **échouer** avec `capability-refused: files_read is not
 granted` — c'est le garde-fou qui marche.
 
+Après `node scripts/build.mjs && node scripts/sign.mjs`, la même boucle
+tourne sur `dist/stage` directement : l'archive est signée pour de bon, plus
+besoin de copie temporaire ni de signature « dev ».
+
+## Empaqueter et signer
+
+```sh
+node scripts/build.mjs     # stage package/, vérifie les digestes, packe dist/
+node scripts/sign.mjs      # Ed25519 sur sha256(manifest.json) -> signature.ed25519
+node scripts/verify.mjs    # re-vérifie l'archive comme Orivo le fera
+```
+
+Le résultat est `dist/com.orivo.gamestream-0.1.0.orivo-plugin` (tar gzippé :
+`manifest.json`, `component.wasm`, `signature.ed25519`). La clé de release
+d'Orivo vit dans `keys/` (**gitignorée, jamais committée**) ; `sign.mjs
+--key <pem>` en prend une autre. `scripts/lib/manifest-rules.mjs` reproduit
+les règles de `plugin_manifest.rs` : une archive refusée par le host échoue
+ici, à l'emballage, avec un message lisible.
+
+## Publier une version (registre d'Orivo)
+
+Le Store de plugins (`Settings → Plugins`) lit l'index signé de
+[`justeozan/orivo-plugin-registry`](https://github.com/justeozan/orivo-plugin-registry)
+— la liste compilée dans le binaire ne contient que Quiky. Publier, c'est
+donc trois choses :
+
+```sh
+# 1. l'archive publiée = l'URL de téléchargement (hôte de l'allowlist) :
+shasum -a 256 dist/*.orivo-plugin && stat -f%z dist/*.orivo-plugin
+gh release create v<X.Y.Z> dist/*.orivo-plugin --notes "..."
+
+# 2. l'index — depuis le dépôt du registre (pas celui-ci) :
+#    entrer sha256 + sizeBytes réels de l'archive, monter `sequence`
+#    (jamais reculer), repousser `expiresAtEpochMs`, puis :
+cd ~/path/to/orivo-plugin-registry
+node scripts/sign.mjs && node scripts/verify.mjs
+git add index.v1.json && git commit -m "index: ..." && git push
+
+# 3. les clients ne rechargent l'index qu'à la TTL (6 h) : relancer Orivo
+#    (ou attendre) force le rafraîchissement.
+```
+
+Vérifié de bout en bout pour `v0.1.0` : `parse_signed_index_with_key` (code
+host réel, clé compilée) accepte l'index publié, et l'archive téléchargée
+passe `install_package(.., ReleaseOnly)` — identité + health-check compris —
+et apparaît comme *trusted*.
+
 ## Les cinq documents, dans l'ordre
 
 1. [`docs/01-contexte-orivo.md`](docs/01-contexte-orivo.md) — la plateforme :
@@ -93,11 +148,16 @@ granted` — c'est le garde-fou qui marche.
 5. [`docs/05-manques-et-plan.md`](docs/05-manques-et-plan.md) — les sept manques
    structurels et le plan en 4 phases.
 
-## Installer le plugin dans Orivo (canal dev)
+## Installer le plugin dans Orivo
 
-Empaqueter `package/` (manifeste + composant) en **tar gzippé** nommé
-`*.orivo-plugin`, puis `Settings → Plugins → install from file`
-(`install_plugin_from_file`, non signé accepté, installé en développement).
+**Canal registre** (développement public) : `Settings → Plugins` →
+Moonlight / Sunshine → installer — le host télécharge l'archive de la release
+via l'index signé, la vérifie contre la clé de release et l'installe en
+*trusted*.
+
+**Canal dev** : `node scripts/build.mjs && node scripts/sign.mjs` puis
+`Settings → Plugins → install from file` sur `dist/*.orivo-plugin`
+(installé en développement, mise à jour manuelle seule).
 Ensuite : création de profil runner → « Add a folder » (slot `games`) →
 import → bibliothèque. Ryujinx (`orivo/plugins/ryujinx/`) est le plugin de
 référence du même gabarit.
