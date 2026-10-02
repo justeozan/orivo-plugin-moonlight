@@ -1,0 +1,16 @@
+{
+  "name": "@orivo/plugin-moonlight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Moonlight / Sunshine: an Orivo runner plugin for a .stream game library.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "sign": "node scripts/sign.mjs",
+    "verify": "node scripts/verify.mjs"
+  }
+}

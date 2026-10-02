@@ -3,3 +3,11 @@
 # compiler output changes when the sources change, and the digest in
 # `package/manifest.json` is checked against it.
 target/
+
+# `node scripts/build.mjs` stages and packs here; only `dist/*.orivo-plugin`
+# is ever published, and only as a release asset.
+dist/
+
+# Orivo's release signing key. The private key never enters git: sign.mjs
+# takes it from here, and CI (if it ever signs) must supply it itself.
+keys/
