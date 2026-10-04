@@ -134,12 +134,12 @@ runtime en est la preuve observable.
 | Besoin Moonlight/Sunshine | Dans le contrat v1 ? | Où il faudra le faire |
 |---|---|---|
 | Lister une bibliothèque locale | ✅ `list-directory` | le plugin |
-| Préparer un lancement | ✅ `prepare-launch` (mode `default` uniquement) | le plugin + wrapper (§8 de `01`) |
+| Préparer un lancement | ✅ `prepare-launch` (modes `default` et `stream`) | le plugin nomme le mode, l'hôte construit le process |
 | Lire des métadonnées locale (ex. `apps.json` de Sunshine) | ✅ `read-file` (≤ 1 MiB) | le plugin |
 | Parler au réseau (API Sunshine, pairage, LAN) | ❌ **aucun import** | révision de contrat / hôte Orivo |
 | Savoir l'OS du guest | ❌ **jamais transmis** | révision de contrat / détection hôte |
-| Lancer `moonlight stream <hôte> <jeu>` (2 args) | ❌ **1 seul argument**, mode fermé | wrapper utilisateur / nouveau mode ABI |
-| Lancer Moonlight/SSH sans fichier local | ❌ le fichier doit exister dans un grant | idem |
+| Lancer `moonlight stream <hôte> <jeu>` (2 args) | ✅ mode `stream` : l'hôte construit la liste fermée | l'hôte, depuis le placeholder qu'il a écrit |
+| Lancer Moonlight/SSH sans fichier local | ❌ le fichier doit exister dans un grant | inchangé — le placeholder *est* ce fichier |
 | Proposer une installation (UI, modale, bouton) | ❌ `ui-plugin` contract-only | Orivo lui-même |
 | Exécuter `moonlight list`, contrôler un processus | ❌ pas d'exécution | Orivo / futur |
 | Horloge, aléatoire, WASI | ❌ refusé avant instanciation | — |

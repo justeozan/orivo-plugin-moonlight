@@ -4,14 +4,17 @@
 //! ## What this component is, and what it deliberately is not
 //!
 //! It is a `runner-plugin` over **one directory grant** (`games`, Orivo's
-//! `DEFAULT_DIRECTORY_SLOT`). Inside that folder the user keeps *placeholder
-//! files* — one ordinary file per streamable game, conventionally named
-//! `Some Game.stream`. The component lists those files, turns each into an
-//! opaque library candidate, and prepares a launch intent that echoes back
-//! exactly what the host asked about. Orivo resolves the profile's application
-//! (the Moonlight binary or a wrapper the user picked) and the placeholder file
-//! itself; this component never sees a path, never builds a command line and
-//! never learns the machine it runs on.
+//! `DEFAULT_DIRECTORY_SLOT`). Inside that folder live *placeholder files* —
+//! one ordinary file per streamable game, named `Some Game.stream`. Orivo
+//! writes them itself from the Sunshine host's application feed when one is
+//! configured (`orivo/src-tauri/src/gamestream.rs`), and the user may also
+//! keep their own by hand; either way they are just names to this component.
+//! It lists those files, turns each into an opaque library candidate, and
+//! prepares a launch intent that echoes back exactly what the host asked
+//! about. Orivo resolves the profile's application (the Moonlight binary) and
+//! the placeholder file itself, and re-reads the placeholder to build the
+//! arguments; this component never sees a path, never builds a command line
+//! and never learns the machine it runs on.
 //!
 //! It is deliberately unable to: no network (there is no network import in v1),
 //! no Moonlight/Sunshine process control, no OS detection (the guest is not
@@ -69,7 +72,7 @@ const PLUGIN_ID: &str = "com.orivo.gamestream";
 /// Must equal `package/manifest.json`'s `version` and `Cargo.toml`'s: the
 /// registry's pre-install gate asks the component who it is and refuses a
 /// package that disagrees with its own manifest.
-const PLUGIN_VERSION: &str = "0.1.0";
+const PLUGIN_VERSION: &str = "0.2.0";
 
 /// The one directory grant this component asks for. `games` is deliberately
 /// the slot Orivo's "Add a folder" flow already grants
@@ -228,14 +231,32 @@ impl RunnerGuest for GameStream {
         })
     }
 
-    /// Opaque ids only, echoed back exactly as received. The host owns the
-    /// process, the working directory and the arguments: it resolves the
-    /// profile's application and the placeholder file itself, and this mode
-    /// (`"default"`, the only one v1 declares) starts that application with
-    /// that file as its single argument (`runner_host.rs`, the exhaustive
-    /// match on `PluginLaunchMode`). Which means: for a real stream to start,
-    /// `profile.application` has to be something that treats one file argument
-    /// as "stream this game" — a wrapper, per `docs/05-manques-et-plan.md`.
+    /// Opaque ids only, echoed back exactly as received, plus the *name* of a
+    /// launch shape — never its arguments.
+    ///
+    /// `"stream"` is the shape Orivo added for exactly this plugin
+    /// (`docs/05-manques-et-plan.md` §3.2, now closed): the host reads the
+    /// placeholder file it wrote itself, validates the two strings in it, and
+    /// starts the profile's application with the closed argument list
+    /// `stream <host> <app>`. That replaces the v0.1 wrapper recipe — the
+    /// profile's application is the Moonlight binary now, not a script that
+    /// has to interpret one file argument.
+    ///
+    /// Every game this component discovers is a `.stream` placeholder, because
+    /// that is the only thing `discover_page` lists, so the shape is the same
+    /// for all of them and is not derived from the reference. Naming it is also
+    /// the whole of this component's say in the matter: the mode is an enum on
+    /// the host side, the profile carries the user's own permission for it, and
+    /// the host refuses the launch if the two disagree. A plugin that could
+    /// name an argument list would be choosing its own command line.
+    ///
+    /// An Orivo without that shape answers `invalid-result("intent mode")` to
+    /// a word it does not know, which fails the launch with a message about
+    /// the plugin rather than about the host. `minOrivoVersion` cannot express
+    /// the requirement — the shape landed after 0.3.6 and has no release
+    /// number yet — so it stays at `0.3.0` and this is the only place the
+    /// floor is written down. Raise it to the release that ships the `stream`
+    /// mode once that release has a number.
     fn prepare_launch(
         profile_id: String,
         game_reference: String,
@@ -244,7 +265,7 @@ impl RunnerGuest for GameStream {
             runner_id: PLUGIN_ID.into(),
             profile_id,
             game_reference,
-            mode: "default".into(),
+            mode: "stream".into(),
         })
     }
 }
