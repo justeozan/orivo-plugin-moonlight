@@ -11,8 +11,8 @@ installation selon la plateforme, (3) synchroniser les jeux locaux et distants,
 |---|---|---|---|
 | 1 | Détecter les clients installés | Partiellement (lecture de dossiers accordés, sans savoir l'OS) | plugin (lecture) + **Orivo** (UI, parcours de grant) |
 | 2 | Proposer l'installation par plateforme | ❌ pas d'OS transmis, `ui-plugin` contract-only | **Orivo** (futur) |
-| 3 | Synchro des jeux locaux/distant | ❌ pas de réseau dans le guest | placeholders locaux (v0.1) → révision de contrat / hôte |
-| 4 | Play → Moonlight sur le bon jeu | ⚠️ lancement à **un seul argument**, fichier local obligatoire | plugin + **wrapper** choisi comme application → vrai fix : nouveau mode d'ABI |
+| 3 | Synchro des jeux locaux/distant | ✅ par l'hôte : il interroge l'API Sunshine et écrit les placeholders | **Orivo** (`gamestream.rs`) ; le guest n'aura jamais de réseau |
+| 4 | Play → Moonlight sur le bon jeu | ✅ mode `stream` : `stream <hôte> <jeu>`, liste construite par l'hôte | **Orivo** (le mode) + ce plugin (il le nomme, `v0.2.0`) |
 | 5 | Modale de doublon local/distant | ❌ UI | **Orivo** (la clé de carte rend le doublon détectable) |
 
 Rien de tout cela n'est un détail d'implémentation : ce tableau est la
@@ -93,16 +93,23 @@ Contraintes réelles :
 (premier appel = aucun grant, et un refus ne doit pas rejeter un profil qui
 n'a encore rien à valider — commentaire dans `src/lib.rs`).
 
-## 5. Le format `.stream` (v0.1)
+## 5. Le format `.stream`
 
 - **Nom** : `<Titre>.stream`. Le nom *est* le titre ; l'`external_id` en dérive
   (`x:` + hex, `03-regles-de-construction.md` §1).
-- **Corps** : ignoré en v0.1. Il est réservé à la forme suivante, quand le
-  réseau ou un import hôte existera :
+- **Corps** : **lu, depuis le mode `stream`** (§3.2 de `05`). Le plugin ne le
+  lit jamais — il n'a pas `read-file` — mais l'hôte, lui, l'écrit et le relit
+  au lancement pour en tirer `<hôte>` et `<jeu>` :
 
 ```json
-{ "host": "living-room-pc", "client": "moonlight", "app": "Steam" }
+{ "host": "astra.local", "client": "moonlight", "app": "Celeste" }
 ```
+
+  L'hôte revalide ces trois champs à chaque lancement plutôt que de faire
+  confiance à ce qu'il a écrit : un fichier posé là par autre chose que le feed
+  doit encore être ce document pour pouvoir lancer quoi que ce soit. `client`
+  doit valoir `moonlight` ; `host` et `app` sont bornés, sans caractères de
+  contrôle, et ne peuvent pas commencer par `-`.
 
 - **Pourquoi une extension inconnue du système** : elle ne doit être ouverte
   par rien, associée à rien, ni bloquée par des filtres de type. Un simple
@@ -130,13 +137,17 @@ Orivo affiche déjà les cartes runner avec leur Play (`src/app.ts`, ligne
 « COMING SOON » pour Moonlight/Sunshine, `:2425`). Le clic appelle `launch_game`
 → `prepare_runner_launch` → `application + [fichier]`.
 
-**Ce qui manque pour que ça streamme vraiment** : `moonlight stream <hôte> <jeu>`
-exige deux arguments, le contrat n'en donne qu'un. Deux issues, dans l'ordre de
-simplicité :
+**Ce qui manquait, et ne manque plus** : `moonlight stream <hôte> <jeu>` exige
+deux arguments, et le contrat v1 n'en donnait qu'un. C'est la deuxième issue
+ci-dessous qui a été retenue et livrée, côté Orivo ; la première est conservée
+ici pour mémoire, parce que c'est elle qui explique pourquoi le corps du
+`.stream` a la forme qu'il a. Un profil en mode `stream` pointe maintenant
+directement sur le binaire Moonlight.
 
-1. **Wrapper (workaround, sans toucher à Orivo)** : l'utilisateur choisit comme
-   *application* du profil un exécutable qui accepte un fichier et fait le
-   reste — sur macOS/Linux un script `moonlight-stream` :
+1. ~~**Wrapper (workaround, sans toucher à Orivo)**~~ — plus nécessaire :
+   l'utilisateur choisissait comme *application* du profil un exécutable qui
+   accepte un fichier et fait le reste — sur macOS/Linux un script
+   `moonlight-stream` :
 
    ```sh
    #!/bin/sh

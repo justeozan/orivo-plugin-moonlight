@@ -5,18 +5,25 @@ Le contexte complet d'Orivo et le squelette du plugin **Moonlight / Sunshine**
 possible, ce qui ne l'est pas, et pourquoi — avec un composant WebAssembly qui
 compile, se valide et se simule aujourd'hui.
 
-> **État honnête** : la Phase 0 est livrée (documentation + squelette validé).
-> Un clic **Play** ne streamme pas encore par lui-même : le contrat d'Orivo ne
-> donne qu'**un seul argument** au lancement (`un fichier`), alors que Moonlight
-> exige `stream <hôte> <jeu>`, et le guest n'a **aucun accès réseau** pour
-> lire une bibliothèque distante. La parade du v0.1 est un *wrapper* choisi
-> comme application du profil ; le vrai fix est une décision d'ABI côté Orivo.
-> Tout est détaillé dans [`docs/05-manques-et-plan.md`](docs/05-manques-et-plan.md).
+> **État honnête** : un clic **Play** streamme, à partir de `v0.2.0`. Les deux
+> manques qui l'en empêchaient ont été fermés **côté hôte**, et c'est là qu'ils
+> devaient l'être : Orivo a maintenant un mode de lancement `stream` dont il
+> construit lui-même la liste d'arguments `stream <hôte> <jeu>` à partir du
+> placeholder (`05-manques-et-plan.md` §3.2), et c'est Orivo qui interroge
+> l'API Sunshine et **écrit** les placeholders dans le dossier accordé (§1.2).
+> Le *wrapper* du v0.1 n'est donc plus nécessaire : l'application du profil est
+> le binaire Moonlight. Le guest, lui, n'a toujours aucun accès réseau et n'en
+> aura pas : c'est le point, pas une lacune.
+>
+> Ce que `v0.2.0` exige en retour : un Orivo qui connaît le mot `stream`. Le
+> mode a atterri après `0.3.6` et n'a pas encore de numéro de release, donc
+> `minOrivoVersion` ne peut pas l'exprimer et reste à `0.3.0` — sur un hôte
+> plus ancien le lancement échoue avec `invalid-result("intent mode")`. Voir
+> [`orivo/docs/gamestream.md`](../orivo/docs/gamestream.md).
 >
 > **Publication** : `v0.1.0` est empaquetée, signée avec la clé de release
-> d'Orivo, publiée en release GitHub et listée dans l'index signé du registre
-> — elle apparaît donc dans `Settings → Plugins`. Le paragraphe ci-dessus
-> tient toujours : *publié* ne veut pas encore dire *streamme*.
+> d'Orivo, publiée en release GitHub et listée dans l'index signé du registre.
+> `v0.2.0` est empaquetée et signée ici ; elle n'est pas encore publiée.
 
 ## Ce qu'il y a ici
 

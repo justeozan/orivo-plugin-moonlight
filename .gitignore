@@ -11,3 +11,10 @@ dist/
 # Orivo's release signing key. The private key never enters git: sign.mjs
 # takes it from here, and CI (if it ever signs) must supply it itself.
 keys/
+
+# Installed by `pnpm install` for the packaging scripts; the lockfile beside it
+# is committed, this is not.
+node_modules/
+
+# macOS leaves one in every directory it has been looked at in Finder.
+.DS_Store

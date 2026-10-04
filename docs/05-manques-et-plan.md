@@ -19,10 +19,26 @@ bibliothèque distante ne peut être ni lue ni mise à jour par le plugin.
 1. **v0.1 — placeholders manuels** : le dossier `games` *est* la bibliothèque ;
    l'utilisateur y pose (ou un futur outil Orivo y écrit) les jeux distants.
    Fait aujourd'hui, sans rien changer à Orivo.
-2. **Étape hôte — import côté Orivo** : un parcours natif (Tauri a le réseau)
-   qui interroge Sunshine/`moonlight list` et **écrit** les placeholders dans le
-   dossier accordé. Aucun changement de contrat requis, mais du code Orivo —
-   et l'écriture reste de l'hôte, puisque le guest n'écrit jamais.
+2. **Étape hôte — import côté Orivo : ✅ FAIT.** L'hôte lance `moonlight list
+   <machine>` — le client du profil lui-même — et **écrit** un placeholder par
+   application dans le dossier accordé, au début de l'import d'un profil en
+   mode `stream`. Pas `GET /api/apps` : l'API web de Sunshine s'authentifie
+   avec le **compte admin de son interface**, alors que le client, lui, est
+   autorisé par le certificat établi à l'appairage — la même permission qui
+   permet de streamer. Donc **aucun mot de passe n'existe dans cette
+   fonctionnalité**, rien n'est stocké en clair, aucun certificat auto-signé
+   n'est à accepter, et ce n'est pas spécifique à une implémentation d'hôte :
+   c'est le protocole de Moonlight, donc Apollo répond pareil. Prix payé : il
+   faut le binaire du client (qui est de toute façon ce qui joue le jeu), et
+   une machine injoignable fait *attendre* `list` au lieu d'échouer — chaque
+   appel est donc borné par un délai. Aucun changement de contrat : le guest
+   n'écrit jamais, ne lance jamais rien, et ne voit que des fichiers. Un
+   manifeste
+   `.orivo-gamestream.json` posé à côté dit lesquels viennent du feed, et c'est
+   la seule autorité pour en supprimer un — un `.stream` fait à la main survit
+   à tous les rafraîchissements. Sans hôte configuré, le rafraîchissement est
+   un no-op : le mode manuel du point 1 continue de marcher.
+   `orivo/src-tauri/src/gamestream.rs`, `orivo/docs/gamestream.md`.
 3. **Étape ABI — un vrai import réseau** : exposer `network_fetch` au guest
    (import WIT + allowlist `networkDomains` déjà en place dans le manifeste),
    avec les mêmes garde-fous que partout ailleurs (budget, domaine, pas de
@@ -63,21 +79,20 @@ a plugin's ». Le mode renvoyé par le plugin doit être `"default"`, sinon
 artifice.
 
 **Trajectoire (dans l'ordre).**
-1. **Wrapper choisi comme application (v0.1, sans rien changer à Orivo)** :
-   l'exécutable du profil est un script exécutable (macOS/Linux) ou un helper
-   `.exe` (Windows) qui reçoit le placeholder et fait `stream <hôte> <jeu>`.
-   Le contenu du `.stream` (§5 de `04`) deviendra alors la source de
-   `<hôte>/<jeu>` ; en attendant, le wrapper peut le coder en dur. Déjà
-   documenté, pas encore livré (les wrappers sont des fichiers **utilisateur**,
-   hors du package — le package ne peut pas contenir de script).
-2. **Étape ABI — un mode `stream` (ou similaire)** : ajouter une variante à
-   `PluginLaunchMode`, décidée et implémentée **côté Orivo** : nouvelle valeur
-   acceptée dans `plugin_runtime.rs:3541`, nouveau bras dans le match de
-   `runner_host.rs:1184`, et une forme de réponse du guest qui porte hôte+app
-   **sans** devenir une ligne de commande arbitraire (ex. ids opaques
-   supplémentaires que l'hôte valide contre une allowlist, à définir). Orivo
-   a déjà noté « élargir runner-profile et modes de lancement » dans ses plans
-   ; c'est ici que cela se range.
+1. ~~**Wrapper choisi comme application**~~ — **plus nécessaire**, et jamais
+   livré : le point 2 l'a rendu inutile avant qu'il ne le soit. L'application
+   du profil est le binaire Moonlight.
+2. **Étape ABI — un mode `stream` : ✅ FAIT.** `PluginLaunchMode::Stream` et
+   `RunnerLaunchMode::Stream` existent côté Orivo, et la forme retenue ne fait
+   pas porter hôte+app par la réponse du guest du tout : le plugin ne nomme que
+   **le mot** `stream`, et l'hôte lit hôte+app dans le placeholder qu'il a
+   lui-même écrit et qu'il revalide. Une allowlist devient alors inutile — il
+   n'y a rien à mettre sur liste, le plugin n'ayant prononcé aucune chaîne qui
+   atteigne la liste d'arguments. Le mode est de plus une **permission du
+   profil**, posée par l'utilisateur, que `validate-profile` ne voit jamais :
+   l'hôte refuse le lancement si l'intention du plugin et la permission du
+   profil ne s'accordent pas, dans les deux sens. Ce dépôt renvoie `"stream"`
+   depuis `v0.2.0`.
 3. **Alternative hôte** : un lancement « intent » natif (comme Winlator sur
    Android, qui passe une intent à une autre application) — même endroit
    d'implémentation, même décision d'ABI.
@@ -97,9 +112,15 @@ dans la bibliothèque — c'est le *parcours d'installation* qui n'existe pas).
 1. parcours « Add a runner » qui montre la matrice de §2 et ouvre le bon lien
    de téléchargement (statique, côté hôte — le plugin ne déclare rien) ;
 2. détection affichée (statut du profil / message de `validate-profile`) ;
-3. modale de doublon : les deux cartes existent déjà avec leur clé
-   `runner:plugin:profil:hash` — comparer titre/profil suffit à la détecter
-   (`04` §7).
+3. ~~modale de doublon~~ : **FAIT, et autrement.** Il n'y a pas deux cartes à
+   réconcilier, parce qu'il n'y en a plus qu'une : l'import d'un jeu que la
+   bibliothèque porte déjà ajoute une *façon de le lancer* à la carte existante
+   plutôt qu'une seconde carte (schéma catalogue v9,
+   `alternate_launch_targets`). Le choix se pose au clic sur Play, dans une
+   liste ancrée au bouton — rien n'est modal dans Orivo. Les titres sont
+   comparés ponctuation et casse mises de côté ; les suffixes d'édition sont
+   délibérément conservés, donc `Cyberpunk 2077` et `Cyberpunk 2077: Ultimate
+   Edition` restent deux jeux.
 
 ## §5 — L'extension `installer` est occupée et n'est pas la nôtre
 
@@ -164,23 +185,33 @@ Aucun de ces points ne se contourne côté plugin ; les trois premiers doivent
   refus sans grant) ;
 - manifeste de canal dev `package/manifest.json` (runner + `files_read`).
 
-## Phase 1 — Utilisable sans toucher à Orivo
+## Phase 1 — Utilisable (dépassée par la Phase 2)
 
-1. **Wrapper par profil** : documenter (déjà) + livrer une recette de wrapper
-   macOS/Linux et le helper Windows (hors package) ;
-2. **Écriture des placeholders** : petit outil/script hôte (ou manuel) qui
-   remplit le dossier `games` — format `.stream` figé (`04` §5) ;
+Cette phase existait pour livrer quelque chose d'utilisable **sans toucher à
+Orivo**. Deux de ses quatre points ont été rendus inutiles par la Phase 2, qui
+a été faite d'abord : le wrapper (point 1) et l'outil d'écriture des
+placeholders (point 2) sont tous les deux remplacés par du code hôte. Ce qui
+reste :
+
+1. ~~Wrapper par profil~~ — remplacé par le mode `stream` (§3.2) ;
+2. ~~Écriture des placeholders par un script~~ — remplacée par le feed hôte
+   (§1.2) ;
 3. **Détection** : accord manuel d'un second dossier + reconnaissance des noms
    de clients dans `discover-page`/`validate-profile`, en attendant l'UI ;
 4. **Installation dans Orivo** : empaqueter le `.orivo-plugin`, installer via
-   le canal dev, créer un profil, accorder un dossier, importer, Play (avec
-   wrapper).
+   le canal dev, créer un profil, le passer en mode *Streams from another
+   machine*, enregistrer l'hôte dans Réglages, accorder un dossier, importer,
+   Play.
 
 *Sortie : un utilisateur avancé streamme réellement depuis Orivo.*
 
 ## Phase 2 — Évolutions de contrat / d'ABI (décisions Orivo)
 
-1. **Mode de lancement `stream`** (§3.2) : fait disparaître le wrapper ;
+1. ✅ **Mode de lancement `stream`** (§3.2) : a fait disparaître le wrapper.
+   Fait côté Orivo ; ce dépôt le renvoie depuis `v0.2.0`. N'a demandé **aucune
+   révision du WIT** : `mode` est déjà un `string` dans le contrat v1, et la
+   baseline `wit-v1-baseline.json` est donc inchangée — c'est le mot accepté
+   qui a bougé, pas la forme. Le feed hôte (§1.2) n'en a pas demandé non plus.
 2. **Plateforme transmise au guest** (§2.3) : rend la matrice d'installation
    applicable par le plugin ;
 3. **Import réseau** (§1.3) : synchro distante réelle (découverte Sunshine,
@@ -188,8 +219,9 @@ Aucun de ces points ne se contourne côté plugin ; les trois premiers doivent
    le manifeste.
 
 Chacun est indépendant ; l'ordre proposé est celui du rapport
-utilisateur/risque. Chacun exige une révision revue du WIT et un relevé de la
-baseline `wit-v1-baseline.json` côté Orivo.
+utilisateur/risque. Les deux restants exigent une révision revue du WIT et un
+relevé de la baseline `wit-v1-baseline.json` côté Orivo — le premier, lui, n'en
+a pas eu besoin, pour la raison dite ci-dessus.
 
 ## Phase 3 — Expérience Orivo (UI hôte)
 
