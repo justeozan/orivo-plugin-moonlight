@@ -72,7 +72,7 @@ const PLUGIN_ID: &str = "com.orivo.gamestream";
 /// Must equal `package/manifest.json`'s `version` and `Cargo.toml`'s: the
 /// registry's pre-install gate asks the component who it is and refuses a
 /// package that disagrees with its own manifest.
-const PLUGIN_VERSION: &str = "0.2.0";
+const PLUGIN_VERSION: &str = "0.2.1";
 
 /// The one directory grant this component asks for. `games` is deliberately
 /// the slot Orivo's "Add a folder" flow already grants
@@ -252,11 +252,11 @@ impl RunnerGuest for GameStream {
     ///
     /// An Orivo without that shape answers `invalid-result("intent mode")` to
     /// a word it does not know, which fails the launch with a message about
-    /// the plugin rather than about the host. `minOrivoVersion` cannot express
-    /// the requirement — the shape landed after 0.3.6 and has no release
-    /// number yet — so it stays at `0.3.0` and this is the only place the
-    /// floor is written down. Raise it to the release that ships the `stream`
-    /// mode once that release has a number.
+    /// the plugin rather than about the host. The shape ships in **0.3.7**, so
+    /// that is `minOrivoVersion` — it was `0.3.0` only for as long as the
+    /// release had no number, and the floor was written here instead. An older
+    /// Orivo now refuses the package at install time, which is where a version
+    /// requirement should be refused rather than at the first Play.
     fn prepare_launch(
         profile_id: String,
         game_reference: String,

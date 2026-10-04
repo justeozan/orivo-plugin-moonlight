@@ -11,7 +11,7 @@
 export const SDK_V1 = 'orivo-plugin@1';
 
 /** The Orivo release this plugin is built for; `minOrivoVersion` may not exceed it. */
-export const TARGET_ORIVO_VERSION = '0.3.0';
+export const TARGET_ORIVO_VERSION = '0.3.7';
 
 export const MANIFEST_ENTRY = 'manifest.json';
 export const COMPONENT_ENTRY = 'component.wasm';
