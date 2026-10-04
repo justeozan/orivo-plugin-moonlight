@@ -5,7 +5,8 @@ Le contexte complet d'Orivo et le squelette du plugin **Moonlight / Sunshine**
 possible, ce qui ne l'est pas, et pourquoi — avec un composant WebAssembly qui
 compile, se valide et se simule aujourd'hui.
 
-> **État honnête** : un clic **Play** streamme, à partir de `v0.2.0`. Les deux
+> **État honnête** : un clic **Play** streamme, à partir de `v0.2.0` sur un
+> Orivo `0.3.7`. Les deux
 > manques qui l'en empêchaient ont été fermés **côté hôte**, et c'est là qu'ils
 > devaient l'être : Orivo a maintenant un mode de lancement `stream` dont il
 > construit lui-même la liste d'arguments `stream <hôte> <jeu>` à partir du
@@ -15,15 +16,17 @@ compile, se valide et se simule aujourd'hui.
 > le binaire Moonlight. Le guest, lui, n'a toujours aucun accès réseau et n'en
 > aura pas : c'est le point, pas une lacune.
 >
-> Ce que `v0.2.0` exige en retour : un Orivo qui connaît le mot `stream`. Le
-> mode a atterri après `0.3.6` et n'a pas encore de numéro de release, donc
-> `minOrivoVersion` ne peut pas l'exprimer et reste à `0.3.0` — sur un hôte
-> plus ancien le lancement échoue avec `invalid-result("intent mode")`. Voir
+> Ce que ça exige en retour : un Orivo qui connaît le mot `stream`. Le mode
+> ship dans **0.3.7**, donc c'est le `minOrivoVersion` de `v0.2.1`. Un hôte
+> plus ancien refuse maintenant le paquet **à l'installation** — là où une
+> exigence de version doit être refusée — plutôt qu'au premier Play avec
+> `invalid-result("intent mode")`, qui accusait le plugin d'un défaut de
+> l'hôte. `v0.2.0` déclarait `0.3.0` faute de numéro ; c'est corrigé. Voir
 > [`orivo/docs/gamestream.md`](../orivo/docs/gamestream.md).
 >
 > **Publication** : `v0.1.0` est empaquetée, signée avec la clé de release
 > d'Orivo, publiée en release GitHub et listée dans l'index signé du registre.
-> `v0.2.0` est empaquetée et signée ici ; elle n'est pas encore publiée.
+> `v0.2.1` est empaquetée et signée ici ; elle n'est pas encore publiée.
 
 ## Ce qu'il y a ici
 
